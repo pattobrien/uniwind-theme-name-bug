@@ -1,73 +1,74 @@
-# Minimal Uniwind Template
+# Uniwind ThemeName Type Bug Reproduction
 
-This is a [React Native](https://reactnative.dev/) project built with [Expo](https://expo.dev/) and [React Native Reusables](https://reactnativereusables.com).
+This repository reproduces the bug described in [uniwind issue #244](https://github.com/uni-stack/uniwind/issues/244).
 
-It was initialized using the following command:
+## The Bug
 
-```bash
-npx @react-native-reusables/cli@latest init -t uniwind-theme-name-bug
-```
+When using TypeScript's `moduleSuffixes` option (common in React Native projects), the `ThemeName` type is not properly resolved because `config.native.d.ts` does not re-export it.
 
-## Getting Started
+This causes `useUniwind()` to return an error-typed value for the `theme` property, breaking type safety.
 
-To run the development server:
+## How to Reproduce
 
-```bash
-    npm run dev
-    # or
-    yarn dev
-    # or
-    pnpm dev
-    # or
-    bun dev
-```
-
-This will start the Expo Dev Server. Open the app in:
-
-- **iOS**: press `i` to launch in the iOS simulator _(Mac only)_
-- **Android**: press `a` to launch in the Android emulator
-- **Web**: press `w` to run in a browser
-
-You can also scan the QR code using the [Expo Go](https://expo.dev/go) app on your device. This project fully supports running in Expo Go for quick testing on physical devices.
-
-## Adding components
-
-You can add more reusable components using the CLI:
+1. Clone this repo and install dependencies:
 
 ```bash
-npx react-native-reusables/cli@latest add [...components]
+pnpm install
 ```
 
-> e.g. `npx react-native-reusables/cli@latest add input textarea`
+2. Run TypeScript to see the errors:
 
-If you don't specify any component names, you'll be prompted to select which components to add interactively. Use the `--all` flag to install all available components at once.
+```bash
+pnpm tsc --noEmit
+```
 
-## Project Features
+You should see errors like:
 
-- ⚛️ Built with [Expo Router](https://expo.dev/router)
-- 🎨 Styled with [Tailwind CSS](https://tailwindcss.com/) via [Uniwind](https://uniwind.dev/)
-- 📦 UI powered by [React Native Reusables](https://github.com/founded-labs/react-native-reusables)
-- 🚀 New Architecture enabled
-- 🔥 Edge to Edge enabled
-- 📱 Runs on iOS, Android, and Web
+```
+app/_layout.tsx(21,25): error TS7053: Element implicitly has an 'any' type because expression of type 'ThemeName' can't be used to index type 'Record<"light" | "dark", NativeTheme>'.
+```
 
-## Learn More
+## Root Cause
 
-To dive deeper into the technologies used:
+The issue is in the type declaration files:
 
-- [React Native Docs](https://reactnative.dev/docs/getting-started)
-- [Expo Docs](https://docs.expo.dev/)
-- [Uniwind Docs](https://docs.uniwind.dev/)
-- [React Native Reusables](https://reactnativereusables.com)
+**`dist/module/core/config/config.d.ts`** correctly exports `ThemeName`:
+```typescript
+export { type ThemeName } from './config.common';
+```
 
-## Deploy with EAS
+**`dist/module/core/config/config.native.d.ts`** is **missing** this export.
 
-The easiest way to deploy your app is with [Expo Application Services (EAS)](https://expo.dev/eas).
+When `moduleSuffixes: [".ios", ".android", ".native", ""]` is set in `tsconfig.json`, TypeScript resolves `./config` to `config.native.d.ts` instead of `config.d.ts`. Since `config.native.d.ts` doesn't export `ThemeName`, the type becomes unresolved.
 
-- [EAS Build](https://docs.expo.dev/build/introduction/)
-- [EAS Updates](https://docs.expo.dev/eas-update/introduction/)
-- [EAS Submit](https://docs.expo.dev/submit/introduction/)
+## Key Files
 
----
+- `tsconfig.json` - Contains the `moduleSuffixes` option that triggers the bug
+- `app/_layout.tsx` - Demonstrates the type error when using `useUniwind()`
 
-If you enjoy using React Native Reusables, please consider giving it a ⭐ on [GitHub](https://github.com/founded-labs/react-native-reusables). Your support means a lot!
+## Environment
+
+- uniwind: 1.2.2
+- TypeScript: ~5.9.2
+- React Native: 0.81.5
+- Expo: ~54.0.29
+
+## Suggested Fix
+
+Add the missing export to `config.native.d.ts`:
+
+```diff
+  import { Insets } from 'react-native';
+  import { CSSVariables, GenerateStyleSheetsCallback } from '../types';
+  import { ThemeName, UniwindConfigBuilder as UniwindConfigBuilderBase } from './config.common';
++ export { type ThemeName } from './config.common';
+  declare class UniwindConfigBuilder extends UniwindConfigBuilderBase {
+      // ...
+  }
+  export declare const Uniwind: UniwindConfigBuilder;
+- export {};
+```
+
+## Workaround
+
+Remove `moduleSuffixes` from `tsconfig.json`, or don't include `.native` in the suffixes array. However, this may break other platform-specific type resolution in React Native projects.

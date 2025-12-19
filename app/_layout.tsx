@@ -9,14 +9,20 @@ import { useUniwind } from 'uniwind';
 
 export {
   // Catch any errors thrown by the Layout component.
-  ErrorBoundary,
+  ErrorBoundary
 } from 'expo-router';
 
 export default function RootLayout() {
-  const { theme } = useUniwind();
+  // Bug reproduction: with moduleSuffixes including ".native", 
+  // the ThemeName type is not exported from config.native.d.ts
+  // causing `theme` to have an error type instead of 'light' | 'dark'
+  const uniwind = useUniwind();
+  const theme = uniwind.theme;
+  const selectedTheme = NAV_THEME[theme]; // throws error
 
+  // This line will show type error: can't index NAV_THEME with error-typed theme
   return (
-    <ThemeProvider value={NAV_THEME[theme ?? 'light']}>
+    <ThemeProvider value={selectedTheme}>
       <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
       <Stack />
       <PortalHost />

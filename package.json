@@ -7,10 +7,11 @@
     "android": "expo start -c --android",
     "ios": "expo start -c --ios",
     "web": "expo start -c --web",
-    "clean": "rm -rf .expo node_modules"
+    "clean": "rm -rf .expo node_modules",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@react-navigation/native": "^7.0.0",
+    "@react-navigation/native": "^7.1.26",
     "@rn-primitives/accordion": "^1.2.0",
     "@rn-primitives/alert-dialog": "^1.2.0",
     "@rn-primitives/aspect-ratio": "^1.2.0",
@@ -37,6 +38,7 @@
     "@rn-primitives/tooltip": "^1.2.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "eslint": "^9.39.2",
     "expo": "~54.0.29",
     "expo-constants": "~18.0.12",
     "expo-haptics": "~15.0.8",
